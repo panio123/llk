@@ -4,6 +4,8 @@ import {
 } from './cell.js';
 import config from './config.js';
 import Audio from './audio.js';
+import Cell_bg from './component/cell_bg.js';
+import mpaList from './map/index.js';
 
 const {
   COL,
@@ -37,6 +39,7 @@ let comboTimer = null;
 let bg = null;
 
 let audio = new Audio();
+let cell_bg = new Cell_bg();
 
 // let worker = wx.createWorker('workers/index.js');
 
@@ -74,9 +77,9 @@ export default class Main {
 
   start() {
     MAP = [];
-    for (let x = 0; x < ROW; x++) {
+    for (let x = 0; x < COL; x++) {
       let row = [];
-      for (let y = 0; y < COL; y++) {
+      for (let y = 0; y < ROW; y++) {
         let cell = new Cell(x, y, level);
         cell.pageY = CELL_WIDTH * -2;
         row.push(cell);
@@ -99,17 +102,17 @@ export default class Main {
     let activeCell = null;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     this.drawBg();
-    MAP.forEach(row => {
-      row.forEach(cell => {
-        if (cell.deaded === false) {
-          if (cell.active === false) {
-            cell.draw();
-          } else {
-            activeCell = cell;
-          }
-        }
-      });
-    });
+    // MAP.forEach(row => {
+    //   row.forEach(cell => {
+    //     if (cell.deaded === false) {
+    //       if (cell.active === false) {
+    //         cell.draw();
+    //       } else {
+    //         activeCell = cell;
+    //       }
+    //     }
+    //   });
+    // });
     if (autoCheck === true) {
       this.checkAllGroupCell();
       autoCheck = false;
@@ -153,8 +156,6 @@ export default class Main {
     pageX1 = pageX;
     pageY1 = pageY;
     selectedCell1 = MAP[x1][y1];
-    selectedCell1.active = true;
-    selectedCell2 = null;
   }
 
   touchMove({
@@ -169,16 +170,17 @@ export default class Main {
     let pageX2 = pageX;
     let pageY2 = pageY;
     if (!selectedCell1) return;
+    selectedCell1.active = true;
     direction = this._swipeDirection(pageX1, pageX2, pageY1, pageY2);
     if (direction === 'Up' && y1 - 1 >= 0) {
       selectedCell2 = MAP[x1][y1 - 1];
       offsetY1 = Math.max(pageY2 - pageY1, CELL_WIDTH * -1 + 1);
       offsetY2 = Math.min(pageY1 - pageY2, CELL_WIDTH - 1);
-    } else if (direction === 'Down' && y1 + 1 < COL) {
+    } else if (direction === 'Down' && y1 + 1 < ROW) {
       selectedCell2 = MAP[x1][y1 + 1];
       offsetY1 = Math.min(pageY2 - pageY1, CELL_WIDTH - 1);
       offsetY2 = Math.max(pageY1 - pageY2, CELL_WIDTH * -1 + 1);
-    } else if (direction === 'Right' && x1 + 1 < ROW) {
+    } else if (direction === 'Right' && x1 + 1 < COL) {
       selectedCell2 = MAP[x1 + 1][y1];
       offsetX1 = Math.min(pageX2 - pageX1, CELL_WIDTH - 1);
       offsetX2 = Math.max(pageX1 - pageX2, CELL_WIDTH * -1 + 1);
@@ -322,9 +324,9 @@ export default class Main {
         list.push(cells);
       }
     });
-    for (let x = 0; x < COL; x++) {
+    for (let x = 0; x < ROW; x++) {
       let row = [];
-      for (let y = 0; y < ROW; y++) {
+      for (let y = 0; y < COL; y++) {
         row.push(MAP[y][x]);
       }
       let cells = this.findGoupCellsByLine(row);
@@ -391,7 +393,7 @@ export default class Main {
     canTouch = false;
     MAP.forEach((col, index) => {
       let moveStep = 0;
-      let colNum = COL;
+      let colNum = ROW;
       col.filter(cell => cell.deaded === true).forEach(() => {
         let cell = new Cell(index, 0, level, autoDie);
         cell.pageY = CELL_WIDTH * -1;

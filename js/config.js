@@ -1,10 +1,10 @@
-const COL = 12;
-const ROW = 8;
+const ROW = 12;
+const COL = 9;
 const FPS = 50;
-const CELL_WIDTH = 32;
+const CELL_WIDTH = canvas.width / COL;
 
-const PAGE_OFFSET_X = (canvas.width - (CELL_WIDTH * ROW)) / 2;
-const PAGE_OFFSET_Y = (canvas.height - (CELL_WIDTH * COL))/2;
+const PAGE_OFFSET_X = (canvas.width - (CELL_WIDTH * COL)) / 2;
+const PAGE_OFFSET_Y = (canvas.height - (CELL_WIDTH * ROW))/2;
 
 export default {
   COL,
