@@ -19,7 +19,6 @@ const {
 } = config;
 
 
-let MAP = [];
 let selectedCell1 = null;
 let selectedCell2 = null;
 let lastSelectedCell2 = null;
@@ -37,9 +36,10 @@ let level = 0;
 let combo = 0;
 let comboTimer = null;
 let bg = null;
+let MAP = mpaList[level];
 
 let audio = new Audio();
-let cell_bg = new Cell_bg();
+let cell_bg = new Cell_bg(ctx, mpaList[level]);
 
 // let worker = wx.createWorker('workers/index.js');
 
@@ -76,17 +76,17 @@ export default class Main {
   }
 
   start() {
-    MAP = [];
-    for (let x = 0; x < COL; x++) {
-      let row = [];
-      for (let y = 0; y < ROW; y++) {
-        let cell = new Cell(x, y, level);
-        cell.pageY = CELL_WIDTH * -2;
-        row.push(cell);
-        cell.moveTo(cell.pageX, y * CELL_WIDTH, 0.5);
-      }
-      MAP.push(row);
-    }
+    MAP = MAP.map((col, x) => {
+      return col.map((cell, y) => {
+        if (cell === 1) {
+          cell = new Cell(x, y);
+          cell.pageY = CELL_WIDTH * -2;
+          cell.moveTo(cell.pageX, y * CELL_WIDTH, 0.5);
+        }
+        return cell;
+      });
+    });
+    window.MAP = MAP;
     setTimeout(() => {
       autoCheck = true;
       canTouch = true;
@@ -102,17 +102,18 @@ export default class Main {
     let activeCell = null;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     this.drawBg();
-    // MAP.forEach(row => {
-    //   row.forEach(cell => {
-    //     if (cell.deaded === false) {
-    //       if (cell.active === false) {
-    //         cell.draw();
-    //       } else {
-    //         activeCell = cell;
-    //       }
-    //     }
-    //   });
-    // });
+    cell_bg.draw();
+    MAP.forEach(row => {
+      row.forEach(cell => {
+        if (cell) {
+          if (cell.active === false) {
+            cell.draw();
+          } else {
+            activeCell = cell;
+          }
+        }
+      });
+    });
     if (autoCheck === true) {
       this.checkAllGroupCell();
       autoCheck = false;
@@ -129,7 +130,7 @@ export default class Main {
 
   drawBg() {
     if (bg) {
-      ctx.drawImage(bg, 0, 0, canvas.width,canvas.height);
+      ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
     } else {
       let image = wx.createImage();
       image.onload = () => {
@@ -266,19 +267,19 @@ export default class Main {
     let cellsX = [];
     let cellsY = [];
     let i = y;
-    while (MAP[x][--i] && MAP[x][i].type === type) {
+    while (MAP[x][--i] && MAP[x][i] && MAP[x][i].type === type) {
       cellsY.push(MAP[x][i]);
     }
     i = y;
-    while (MAP[x][++i] && MAP[x][i].type === type) {
+    while (MAP[x][++i] && MAP[x][i] && MAP[x][i].type === type) {
       cellsY.push(MAP[x][i]);
     }
     i = x;
-    while (MAP[--i] && MAP[i][y].type === type) {
+    while (MAP[--i] && MAP[i][y] && MAP[i][y].type === type) {
       cellsX.push(MAP[i][y]);
     }
     i = x;
-    while (MAP[++i] && MAP[i][y].type === type) {
+    while (MAP[++i] && MAP[i][y] && MAP[i][y].type === type) {
       cellsX.push(MAP[i][y]);
     }
     if (cellsX.length >= 2) {
@@ -298,19 +299,21 @@ export default class Main {
     let result = [];
     let cells = [];
     line.forEach((cell, index) => {
-      if (lastType === cell.type || lastType === null) {
-        cells.push(cell);
-        lastComboIndex = index;
-      } else if (cells.length >= 3) {
-        result = result.concat(cells);
-        cells = [cell];
-      } else {
-        cells = [cell];
+      if (cell) {
+        if (lastType === cell.type || lastType === null) {
+          cells.push(cell);
+          lastComboIndex = index;
+        } else if (cells.length >= 3) {
+          result = result.concat(cells);
+          cells = [cell];
+        } else {
+          cells = [cell];
+        }
+        if (cells.length >= 3 && index === line.length - 1) {
+          result = result.concat(cells);
+        }
+        lastType = cell.type;
       }
-      if (cells.length >= 3 && index === line.length - 1) {
-        result = result.concat(cells);
-      }
-      lastType = cell.type;
     });
     return result.length >= 3 ? result : [];
   }
@@ -340,7 +343,7 @@ export default class Main {
     canTouch = true;
   }
 
-  removeCell(list,noScore=true) {
+  removeCell(list, noScore = true) {
     let hasBomb = null;
     let autoDie = autoCheck;
     list.forEach(cells => {
@@ -348,17 +351,17 @@ export default class Main {
         if (cell.moving === false) {
           cell.remove();
         }
-        if (cell.isBomb === true){
+        if (cell.isBomb === true) {
           cell.isBomb = false;
           hasBomb = cell.type;
         }
       });
       audio.playBoom(combo);
-      if (noScore === true){
-      this.calcScore(cells.length, combo);
+      if (noScore === true) {
+        this.calcScore(cells.length, combo);
       }
     });
-    if(hasBomb){
+    if (hasBomb) {
       this.bombFire(hasBomb);
     }
     if (combo < 4) {
@@ -375,46 +378,51 @@ export default class Main {
     }, 500);
   }
 
-  bombFire(type){
-    let result=[];
-    MAP.forEach(col=>{
-      col.forEach(cell=>{
-        if (cell.type === type && cell.deaded === false){
+  bombFire(type) {
+    let result = [];
+    MAP.forEach(col => {
+      col.forEach(cell => {
+        if (cell.type === type && cell.deaded === false) {
           result.push(cell);
         }
       });
     });
-    if(result.length){
-      this.removeCell([result],false);
+    if (result.length) {
+      this.removeCell([result], false);
     }
   }
 
   supply(autoDie) {
     canTouch = false;
-    MAP.forEach((col, index) => {
+    MAP.forEach((col, x) => {
       let moveStep = 0;
-      let colNum = ROW;
-      col.filter(cell => cell.deaded === true).forEach(() => {
-        let cell = new Cell(index, 0, level, autoDie);
-        cell.pageY = CELL_WIDTH * -1;
-        col.unshift(cell);
-        audio.playDown();
-      });
       for (let i = col.length - 1; i >= 0; i--) {
         let cell = col[i];
-        colNum--;
-        if (cell.deaded === true) {
-          moveStep++;
-          colNum++;
-          MAP[index].splice(i, 1);
-        } else if (moveStep !== 0) {
-          cell.y = colNum;
-          cell.moveTo(cell.pageX, cell.y * CELL_WIDTH, 0.3);
+        if(cell){
+          if(cell.deaded === true){
+            moveStep++; 
+            col.splice(i, 1, false);
+          }else if(moveStep>0){
+            let topCell = col.splice(i,1,false)[0];
+            let y = i + moveStep;
+            topCell.y = y;
+            col.splice(y, 1, topCell);
+            cell.moveTo(topCell.pageX, topCell.y * CELL_WIDTH, 0.3);
+          }
         }
       }
+      col.forEach((cell,y)=>{
+        if(cell === false){
+          let newCell = new Cell(x, y, autoDie);
+          newCell.pageY = CELL_WIDTH * -1; 
+          col.splice(y, 1, newCell);
+          newCell.moveTo(newCell.pageX, newCell.y * CELL_WIDTH, 0.3);
+          audio.playDown();
+        }
+      });
     });
     setTimeout(() => {
-      autoCheck = true;
+      // autoCheck = true;
       canTouch = true;
     }, 500);
   }

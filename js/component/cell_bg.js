@@ -12,34 +12,38 @@ const tile_center = {
   width:70,
   height:70
 };
+let ctx = null;
+let image = null;
 
 export default class Cell_bg{
-  constructor(map=[[]]){
+  constructor(_ctx, map = [[]]) {
+    ctx = _ctx;
     this.map = map;
     this.init();
     this.readying = false;
   }
 
   init(){
-    let image = wx.createImage();
+    image = wx.createImage();
     image.onload = () => {
       this.readying = true;
     }
     image.src = bgUrl;
-    this.image = image;
   }
 
   changeMap(map){
     this.map = map;
   }
 
-  draw(){
+  draw() {
     if(this.readying === false){
       return this;
     }
-    this.map.forEach(col => {
-      col.forEach(cell => {
-
+    this.map.forEach((col, x) => {
+      col.forEach((cell, y) => {
+        if (cell === 1) {
+          ctx.drawImage(image, tile_center.x, tile_center.y, tile_center.width, tile_center.height, x * CELL_WIDTH + PAGE_OFFSET_X, y * CELL_WIDTH + PAGE_OFFSET_Y, CELL_WIDTH, CELL_WIDTH);
+        }
       });
     });
   }

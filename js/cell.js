@@ -15,9 +15,9 @@ export function setCtx(_ctx) {
 }
 
 export class Cell {
-  constructor(x = 0, y = 0, level = 1, autoDie) {
-    let type = (Math.floor(Math.random() * (level + 4)));
-    // let type = Math.round(Math.random() * 4)+1;
+  constructor(x = 0, y = 0, autoDie) {
+    // let type = (Math.floor(Math.random() * (level + 4)));
+    let type = Math.round(Math.random() * 4);
     this.src = `images/cell_${type}.png`;
     this.x = x;
     this.y = y;
@@ -25,7 +25,7 @@ export class Cell {
     this.pageY = y * CELL_WIDTH;
     this.width = this.height = CELL_WIDTH;
     this.type = type;
-    this.isBomb = autoDie=== true?false:Math.floor(Math.random() * 80) === 0;
+    // this.isBomb = autoDie=== true?false:Math.floor(Math.random() * 80) === 0;
     this.id = ++id;
     this.active = false;
     this.deaded = false;
