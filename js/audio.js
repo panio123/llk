@@ -1,7 +1,7 @@
 export default class Audio {
   constructor() {
     let bgm = wx.createInnerAudioContext();
-    bgm.autoplay = true;
+    // bgm.autoplay = true;
     bgm.loop = true;
     bgm.volume = 0.3;
     bgm.src = 'audio/bgm.mp3';

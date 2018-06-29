@@ -1,4 +1,4 @@
-const ROW = 12;
+const ROW = 9;
 const COL = 9;
 const FPS = 50;
 const CELL_WIDTH = canvas.width / COL;

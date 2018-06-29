@@ -1,7 +1,7 @@
 import {
   Cell,
   setCtx
-} from './cell.js';
+} from './component/cell.js';
 import config from './config.js';
 import Audio from './audio.js';
 import Cell_bg from './component/cell_bg.js';
@@ -37,6 +37,7 @@ let combo = 0;
 let comboTimer = null;
 let bg = null;
 let MAP = mpaList[level];
+let placeholders = [];
 
 let audio = new Audio();
 let cell_bg = new Cell_bg(ctx, mpaList[level]);
@@ -55,11 +56,13 @@ export default class Main {
   constructor() {
     this.init();
     wx.onTouchStart((e) => {
+      console.log(selectedCell1);
       if (canTouch === true) {
         this.touchStart(e.touches[0]);
       }
     });
     wx.onTouchMove((e) => {
+      // console.log(selectedCell1);
       if (selectedCell1) {
         this.touchMove(e.touches[0]);
       }
@@ -76,21 +79,22 @@ export default class Main {
   }
 
   start() {
+    let promise=[];
     MAP = MAP.map((col, x) => {
       return col.map((cell, y) => {
         if (cell === 1) {
           cell = new Cell(x, y);
           cell.pageY = CELL_WIDTH * -2;
-          cell.moveTo(cell.pageX, y * CELL_WIDTH, 0.5);
+          promise.push(cell.animateTo(cell.pageX, y * CELL_WIDTH,0.5));
         }
         return cell;
       });
     });
     window.MAP = MAP;
-    setTimeout(() => {
-      autoCheck = true;
+    Promise.all(promise).then(() => {
+      // autoCheck = true;
       canTouch = true;
-    }, 1000);
+    })
     this.draw();
     // worker.postMessage({
     //   type:'start',
@@ -244,6 +248,22 @@ export default class Main {
     let groupCells1 = this.findGoupCellsByCell(selectedCell1);
     let groupCells2 = this.findGoupCellsByCell(selectedCell2);
     if (groupCells1.length || groupCells2.length) {
+      if (groupCells1.length >= 4) {
+        placeholders.push({
+          x: x2,
+          y: y2,
+          type: selectedCell1.type,
+          bombType: this.checkGroupCellsDirection(groupCells1)
+        });
+      }
+      if (groupCells2.length >= 4) {
+        placeholders.push({
+          x: x1,
+          y: y1,
+          type: selectedCell2.type,
+          bombType: this.checkGroupCellsDirection(groupCells2)
+        });
+      }
       this.reset();
       this.removeCell([groupCells1, groupCells2]);
     } else {
@@ -255,6 +275,17 @@ export default class Main {
       selectedCell2.y = y2;
       this.reset();
     }
+  }
+
+  checkGroupCellsDirection(cells) {
+    let {
+      x: x1
+    } = cells[0];
+    let {
+      x: x2
+    } = cells[1];
+    // direction  1=>横向 2=纵向
+    return x1 === x2 ? 2 : 1;
   }
 
   findGoupCellsByCell(cell) {
@@ -298,35 +329,40 @@ export default class Main {
     let lastComboIndex = 0;
     let result = [];
     let cells = [];
-    line.forEach((cell, index) => {
-      if (cell) {
+    line.forEach((cell, x) => {
+      if (cell !== 0) {
         if (lastType === cell.type || lastType === null) {
           cells.push(cell);
-          lastComboIndex = index;
+          lastType = cell.type;
         } else if (cells.length >= 3) {
-          result = result.concat(cells);
+          result.push(cells);
           cells = [cell];
+          lastType = cell.type;
         } else {
           cells = [cell];
+          lastType = cell.type;
         }
-        if (cells.length >= 3 && index === line.length - 1) {
-          result = result.concat(cells);
-        }
-        lastType = cell.type;
+      } else {
+        lastType = -1;
       }
     });
-    return result.length >= 3 ? result : [];
+    return result;
   }
 
   checkAllGroupCell() {
     let list = [];
     canTouch = false;
     MAP.forEach(col => {
-      let cells = this.findGoupCellsByLine(col);
-      if (cells.length) {
-        list.push(cells);
-      }
+      this.findGoupCellsByLine(col).forEach(cells => {
+        let len = cells.length;
+        if (len >= 3) {
+          if (len >= 4) {
+            holders.push({});
+          }
+        }
+      });
     });
+
     for (let x = 0; x < ROW; x++) {
       let row = [];
       for (let y = 0; y < COL; y++) {
@@ -345,7 +381,6 @@ export default class Main {
 
   removeCell(list, noScore = true) {
     let hasBomb = null;
-    let autoDie = autoCheck;
     list.forEach(cells => {
       cells.forEach(cell => {
         if (cell.moving === false) {
@@ -373,8 +408,16 @@ export default class Main {
     comboTimer = setTimeout(() => {
       combo = 0;
     }, 2000);
+    placeholders.forEach(({
+      x,
+      y,
+      type,
+      bombType
+    }) => {
+      MAP[x][y] = new Cell(x, y, bombType, type);
+    });
     setTimeout(() => {
-      this.supply(autoDie);
+      this.supply();
     }, 500);
   }
 
@@ -392,31 +435,31 @@ export default class Main {
     }
   }
 
-  supply(autoDie) {
+  supply() {
     canTouch = false;
     MAP.forEach((col, x) => {
       let moveStep = 0;
       for (let i = col.length - 1; i >= 0; i--) {
         let cell = col[i];
-        if(cell){
-          if(cell.deaded === true){
-            moveStep++; 
+        if (cell) {
+          if (cell.deaded === true) {
+            moveStep++;
             col.splice(i, 1, false);
-          }else if(moveStep>0){
-            let topCell = col.splice(i,1,false)[0];
+          } else if (moveStep > 0) {
+            let topCell = col.splice(i, 1, false)[0];
             let y = i + moveStep;
             topCell.y = y;
             col.splice(y, 1, topCell);
-            cell.moveTo(topCell.pageX, topCell.y * CELL_WIDTH, 0.3);
+            cell.animateTo(topCell.pageX, topCell.y * CELL_WIDTH, 0.5);
           }
         }
       }
-      col.forEach((cell,y)=>{
-        if(cell === false){
-          let newCell = new Cell(x, y, autoDie);
-          newCell.pageY = CELL_WIDTH * -1; 
+      col.forEach((cell, y) => {
+        if (cell === false) {
+          let newCell = new Cell(x, y);
+          newCell.pageY = CELL_WIDTH * -1;
           col.splice(y, 1, newCell);
-          newCell.moveTo(newCell.pageX, newCell.y * CELL_WIDTH, 0.3);
+          newCell.animateTo(newCell.pageX, newCell.y * CELL_WIDTH, 0.5);
           audio.playDown();
         }
       });
