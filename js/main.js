@@ -5,6 +5,7 @@ import {
 import config from './config.js';
 import Audio from './audio.js';
 import Cell_bg from './component/cell_bg.js';
+import Score from './component/score.js';
 import mpaList from './map/index.js';
 
 const {
@@ -41,6 +42,7 @@ let placeholders = [];
 
 let audio = new Audio();
 let cell_bg = new Cell_bg(ctx, mpaList[level]);
+let _score = new Score(ctx);
 
 // let worker = wx.createWorker('workers/index.js');
 
@@ -106,6 +108,7 @@ export default class Main {
     let activeCell = null;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     this.drawBg();
+    _score.draw();
     cell_bg.draw();
     MAP.forEach(row => {
       row.forEach(cell => {
@@ -266,6 +269,7 @@ export default class Main {
       }
       this.reset();
       this.removeCell([groupCells1, groupCells2]);
+      _score.decrease();
     } else {
       MAP[x1][y1] = selectedCell1;
       MAP[x2][y2] = selectedCell2;
